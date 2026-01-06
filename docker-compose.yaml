@@ -1,0 +1,102 @@
+# docker/compose.yml
+name: realtime-social-platform
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME:-app}
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-app}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-app} -d ${DB_NAME:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ===== BACKENDS =====
+  api-node-sequelize:
+    profiles: ["api-node-sequelize"]
+    build:
+      context: ..
+      dockerfile: apps/back/node-sequelize/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+  api-node-prisma:
+    profiles: ["api-node-prisma"]
+    build:
+      context: ..
+      dockerfile: apps/back/node-prisma/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+  api-java-spring:
+    profiles: ["api-java-spring"]
+    build:
+      context: ..
+      dockerfile: apps/back/java-spring/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+  api-rust-rocket:
+    profiles: ["api-rust-rocket"]
+    build:
+      context: ..
+      dockerfile: apps/back/rust-rocket/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+  # ===== FRONTS =====
+  web-vue:
+    profiles: ["web-vue"]
+    build:
+      context: ..
+      dockerfile: apps/front/vue/Dockerfile
+    env_file: ../.env
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-node-prisma # ou enlève si tu veux indépendant
+
+  web-react:
+    profiles: ["web-react"]
+    build:
+      context: ..
+      dockerfile: apps/front/react/Dockerfile
+    env_file: ../.env
+    ports:
+      - "5174:5173"
+    depends_on:
+      - api-node-prisma
+
+volumes:
+  db_data:
