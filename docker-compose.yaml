@@ -2,33 +2,57 @@
 name: realtime-social-platform
 
 services:
-  db:
+  # ==========================
+  # DATABASES (profiles)
+  # ==========================
+  db-postgres:
+    profiles: ["db-postgres"]
     image: postgres:16
     environment:
-      POSTGRES_DB: ${DB_NAME:-app}
-      POSTGRES_USER: ${DB_USER:-app}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-app} -d ${DB_NAME:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
       interval: 5s
       timeout: 3s
       retries: 20
 
-  # ===== BACKENDS =====
+  db-mysql:
+    profiles: ["db-mysql"]
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DB:-app}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # ==========================
+  # BACKENDS (profiles)
+  # ==========================
   api-node-sequelize:
     profiles: ["api-node-sequelize"]
     build:
       context: ..
       dockerfile: apps/back/node-sequelize/Dockerfile
     env_file: ../.env
-    environment:
-      DB_HOST: db
     depends_on:
-      db:
+      db-postgres:
+        condition: service_healthy
+      db-mysql:
         condition: service_healthy
     ports:
       - "4000:4000"
@@ -39,10 +63,10 @@ services:
       context: ..
       dockerfile: apps/back/node-prisma/Dockerfile
     env_file: ../.env
-    environment:
-      DB_HOST: db
     depends_on:
-      db:
+      db-postgres:
+        condition: service_healthy
+      db-mysql:
         condition: service_healthy
     ports:
       - "4000:4000"
@@ -53,10 +77,10 @@ services:
       context: ..
       dockerfile: apps/back/java-spring/Dockerfile
     env_file: ../.env
-    environment:
-      DB_HOST: db
     depends_on:
-      db:
+      db-postgres:
+        condition: service_healthy
+      db-mysql:
         condition: service_healthy
     ports:
       - "4000:4000"
@@ -67,15 +91,17 @@ services:
       context: ..
       dockerfile: apps/back/rust-rocket/Dockerfile
     env_file: ../.env
-    environment:
-      DB_HOST: db
     depends_on:
-      db:
+      db-postgres:
+        condition: service_healthy
+      db-mysql:
         condition: service_healthy
     ports:
       - "4000:4000"
 
-  # ===== FRONTS =====
+  # ==========================
+  # FRONTS (profiles)
+  # ==========================
   web-vue:
     profiles: ["web-vue"]
     build:
@@ -84,8 +110,7 @@ services:
     env_file: ../.env
     ports:
       - "5173:5173"
-    depends_on:
-      - api-node-prisma 
+  
 
   web-react:
     profiles: ["web-react"]
@@ -95,8 +120,7 @@ services:
     env_file: ../.env
     ports:
       - "5174:5173"
-    depends_on:
-      - api-node-prisma
 
 volumes:
-  db_data:
+  pg_data:
+  mysql_data:
