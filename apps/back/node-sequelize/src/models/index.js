@@ -1,61 +1,46 @@
-// connexion sequalize
-const { Sequelize } = require('sequelize');
+const { DataTypes } = require('sequelize');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
-  {
-    host: process.env.DB_HOST,
-    dialect: 'mysql',
-    logging: false,
-  },
-);
+const initModels = (sequelize) => {
+  const User = require('./User')(sequelize, DataTypes);
+  const Post = require('./Post')(sequelize, DataTypes);
+  const Comment = require('./Comment')(sequelize, DataTypes);
+  const Reaction = require('./Reaction')(sequelize, DataTypes);
+  const Report = require('./Report')(sequelize, DataTypes);
 
-const user = require('./User')(sequelize, Sequelize.DataTypes);
-const post = require('./Post')(sequelize, Sequelize.DataTypes);
-const comment = require('./Comment')(sequelize, Sequelize.DataTypes);
-const reaction = require('./Reaction')(sequelize, Sequelize.DataTypes);
-const report = require('./Report')(sequelize, Sequelize.DataTypes);
+  /* =========================
+     Associations
+  ========================== */
 
-sequelize.User = user;
-sequelize.Post = post;
-sequelize.Comment = comment;
-sequelize.Reaction = reaction;
-sequelize.Report = report;
+  User.hasMany(Post, { onDelete: 'CASCADE' });
+  User.hasMany(Comment, { onDelete: 'CASCADE' });
+  User.hasMany(Reaction, { onDelete: 'CASCADE' });
+  User.hasMany(Report, { onDelete: 'CASCADE' });
 
-user.hasMany(post, { onDelete: 'cascade', onUpdate: 'cascade' });
-user.hasMany(comment, { onDelete: 'cascade', onUpdate: 'cascade' });
-user.hasMany(reaction, { onDelete: 'cascade', onUpdate: 'cascade' });
-user.hasMany(report, { onDelete: 'cascade', onUpdate: 'cascade' });
+  Post.belongsTo(User);
+  Post.hasMany(Comment, { onDelete: 'CASCADE' });
+  Post.hasMany(Reaction, { onDelete: 'CASCADE' });
+  Post.hasMany(Report, { onDelete: 'CASCADE' });
 
-post.hasMany(comment, { onDelete: 'cascade', onUpdate: 'cascade' });
-post.hasMany(reaction, { onDelete: 'cascade', onUpdate: 'cascade' });
-post.hasMany(report, { onDelete: 'cascade', onUpdate: 'cascade' });
-post.belongsTo(user);
+  Comment.belongsTo(User);
+  Comment.belongsTo(Post);
+  Comment.hasMany(Reaction, { onDelete: 'CASCADE' });
+  Comment.hasMany(Report, { onDelete: 'CASCADE' });
 
-comment.hasMany(reaction, { onDelete: 'cascade', onUpdate: 'cascade' });
-comment.hasMany(report, { onDelete: 'cascade', onUpdate: 'cascade' });
-comment.belongsTo(user);
-comment.belongsTo(post);
+  Reaction.belongsTo(User);
+  Reaction.belongsTo(Post);
+  Reaction.belongsTo(Comment);
 
-reaction.belongsTo(post);
-reaction.belongsTo(user);
-reaction.belongsTo(comment);
+  Report.belongsTo(User);
+  Report.belongsTo(Post);
+  Report.belongsTo(Comment);
 
-report.belongsTo(user);
-report.belongsTo(post);
-report.belongsTo(comment);
+  return {
+    User,
+    Post,
+    Comment,
+    Reaction,
+    Report,
+  };
+};
 
-sequelize
-  .authenticate()
-  .then(async () => {
-    console.log('✅ MySQL connection OK');
-    // Synchronisation des models avec les tables dans la base de données
-    await sequelize
-      .sync({ alter: true })
-      .catch(() => console.log('Impossible de synchroniser les models'));
-    console.log('Tous les models ont été synchronisés avec succès.');
-  })
-  .catch((error) => console.log('❌ Connexion à MySQL invalide', error));
-module.exports = sequelize;
+module.exports = initModels;
