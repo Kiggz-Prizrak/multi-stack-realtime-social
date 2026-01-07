@@ -1,0 +1,560 @@
+openapi: 3.0.3
+info:
+  title: Realtime Social Platform API
+  version: 2.0.0
+  description: >
+    V2 API contract for the multi-stack realtime social platform.
+    REST for standard operations + WebSocket for realtime messaging.
+
+servers:
+  - url: http://localhost:3000
+    description: Local dev
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Posts
+  - name: Rooms
+  - name: Messages
+
+paths:
+  /api/v2/health:
+    get:
+      tags: [Health]
+      summary: Healthcheck
+      operationId: healthCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  timestamp: { type: string, format: date-time }
+
+  /api/v2/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create an account
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      operationId: usersMe
+      security: [{ jwt: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/UserPublic" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    patch:
+      tags: [Users]
+      summary: Update current user
+      operationId: usersUpdateMe
+      security: [{ jwt: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/UserPublic" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/posts:
+    get:
+      tags: [Posts]
+      summary: List posts
+      operationId: postsList
+      security: [{ jwt: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPosts"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Posts]
+      summary: Create a post
+      operationId: postsCreate
+      security: [{ jwt: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post: { $ref: "#/components/schemas/Post" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/posts/{postId}:
+    get:
+      tags: [Posts]
+      summary: Get a post
+      operationId: postsGetOne
+      security: [{ jwt: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post: { $ref: "#/components/schemas/Post" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    patch:
+      tags: [Posts]
+      summary: Update a post
+      operationId: postsUpdate
+      security: [{ jwt: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post: { $ref: "#/components/schemas/Post" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Posts]
+      summary: Delete a post
+      operationId: postsDelete
+      security: [{ jwt: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/rooms:
+    get:
+      tags: [Rooms]
+      summary: List rooms for current user
+      operationId: roomsList
+      security: [{ jwt: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items: { $ref: "#/components/schemas/Room" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Rooms]
+      summary: Create a room (dm or group)
+      description: >
+        For dm rooms, this endpoint is idempotent for a given pair of users:
+        it returns the existing DM room if it already exists, otherwise it creates it.
+      operationId: roomsCreate
+      security: [{ jwt: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomCreateRequest"
+      responses:
+        "200":
+          description: OK (existing room returned)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room: { $ref: "#/components/schemas/Room" }
+                required: [room]
+        "201":
+          description: Created (new room)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room: { $ref: "#/components/schemas/Room" }
+                required: [room]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v2/rooms/{roomId}/messages:
+    get:
+      tags: [Messages]
+      summary: Get messages history (paginated)
+      operationId: messagesList
+      security: [{ jwt: [] }]
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedMessages"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: integer }
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema: { type: integer }
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema: { type: integer }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        description: Opaque cursor for pagination
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string, example: Please provide valid data }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string, example: email }
+                  message: { type: string, example: Invalid email }
+      required: [error]
+
+    SignupRequest:
+      type: object
+      required: [email, password, username]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        username: { type: string, minLength: 3, maxLength: 30 }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, format: uri }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    AuthResponse:
+      type: object
+      properties:
+        message: { type: string, example: logged in successfully }
+        user: { $ref: "#/components/schemas/UserPublic" }
+        accessToken: { type: string, description: JWT access token }
+      required: [user, accessToken]
+
+    UserPublic:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        username: { type: string }
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+        avatarUrl: { type: string, format: uri, nullable: true }
+        role:
+          type: string
+          enum: [user, admin]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, email, username, role, createdAt, updatedAt]
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        username: { type: string, minLength: 3, maxLength: 30 }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, format: uri }
+
+    Post:
+      type: object
+      properties:
+        id: { type: integer }
+        author: { $ref: "#/components/schemas/UserPublic" }
+        content: { type: string, nullable: true }
+        mediaUrl: { type: string, format: uri, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, author, createdAt, updatedAt]
+
+    PostCreateRequest:
+      type: object
+      properties:
+        content: { type: string }
+        mediaUrl: { type: string, format: uri }
+
+    PostUpdateRequest:
+      type: object
+      properties:
+        content: { type: string }
+        mediaUrl: { type: string, format: uri }
+
+    PaginatedPosts:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Post" }
+        nextCursor:
+          type: string
+          nullable: true
+      required: [items]
+
+    Room:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [dm, group] }
+        name: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, type, createdAt]
+
+    RoomCreateRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [dm, group] }
+        name: { type: string, nullable: true }
+        memberIds:
+          type: array
+          items: { type: integer }
+          description: "For dm: provide exactly 1 other user id. For group: multiple ids."
+
+    Message:
+      type: object
+      properties:
+        id: { type: integer }
+        roomId: { type: integer }
+        sender: { $ref: "#/components/schemas/UserPublic" }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, roomId, sender, content, createdAt]
+
+    PaginatedMessages:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Message" }
+        nextCursor:
+          type: string
+          nullable: true
+      required: [items]

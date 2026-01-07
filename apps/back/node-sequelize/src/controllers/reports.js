@@ -40,7 +40,7 @@ exports.createReport = async (req, res) => {
       return res.status(201).json({ message: 'Reported !' });
     }
     return res.status(404).json({ message: 'Error' });
-  } 
+  }
   const reportPostFind = await Report.findOne({
     where: { PostId: req.body.PostId, UserId: req.auth.UserId },
   });

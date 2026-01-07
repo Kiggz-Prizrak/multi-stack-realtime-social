@@ -36,6 +36,7 @@ ou
 ```bash
   nodemon server
 ```
+
 [la documentation de l'API](https://kiggz-prizrak.github.io/P7-Groupomania-API/#/)
 
 L'API sera disponible sur [localhost:3000](http://localhost:3000)

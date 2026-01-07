@@ -81,9 +81,7 @@ exports.getOnePost = async (req, res) => {
         model: Reaction,
       },
     ],
-    order: [
-      [Comment, 'createdAt', 'DESC'],
-    ],
+    order: [[Comment, 'createdAt', 'DESC']],
     where: { id: req.params.id },
   }).catch((error) => res.status(404).json({ message: 'Post not found' }));
   return res.status(200).json(post);
@@ -104,9 +102,9 @@ exports.modifyPost = async (req, res) => {
 
   const postObject = req.files
     ? {
-      ...req.body,
-      media: `${req.protocol}://${req.get('host')}/images/${req.files.media[0].filename}`,
-    }
+        ...req.body,
+        media: `${req.protocol}://${req.get('host')}/images/${req.files.media[0].filename}`,
+      }
     : req.body;
 
   await Post.update(
@@ -131,7 +129,7 @@ exports.deletePost = async (req, res) => {
     console.log(req.body);
     return res.status(403).json({ message: 'Unauthorized request' });
   }
-  if(post.media) {
+  if (post.media) {
     const filename = post.media.split('/images/')[1];
     await fs.unlink(`images/${filename}`);
   }

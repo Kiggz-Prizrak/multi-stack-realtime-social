@@ -7,7 +7,8 @@ module.exports = (req, res, next) => {
     // const { UserId } = decodedToken;
 
     req.auth = decodedToken;
-    next();G
+    next();
+    G;
 
     // req.auth = { UserId };
     // if (req.body.UserId && req.body.UserId !== UserId) {
@@ -16,6 +17,8 @@ module.exports = (req, res, next) => {
     //   next();
     // }
   } catch (error) {
-    res.status(401).json({ error: error || 'You must be logged in to perform this action' });
+    res
+      .status(401)
+      .json({ error: error || 'You must be logged in to perform this action' });
   }
 };

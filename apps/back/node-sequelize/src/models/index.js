@@ -8,6 +8,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: 'mysql',
+    logging: false,
   },
 );
 
@@ -49,9 +50,10 @@ report.belongsTo(comment);
 sequelize
   .authenticate()
   .then(async () => {
-    console.log('✅ Connexion à MySQL valide');
+    console.log('✅ MySQL connection OK');
     // Synchronisation des models avec les tables dans la base de données
-    await sequelize.sync({ alter: true })
+    await sequelize
+      .sync({ alter: true })
       .catch(() => console.log('Impossible de synchroniser les models'));
     console.log('Tous les models ont été synchronisés avec succès.');
   })
