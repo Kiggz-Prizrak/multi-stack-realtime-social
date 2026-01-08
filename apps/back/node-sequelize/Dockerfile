@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install deps first (better caching)
 COPY apps/back/node-sequelize/package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy the rest of the API
 COPY apps/back/node-sequelize ./

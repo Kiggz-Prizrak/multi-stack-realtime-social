@@ -2,23 +2,15 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
   try {
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
-    // const { UserId } = decodedToken;
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.split(' ')[1] : null;
+    if (!token) return res.status(401).json({ error: 'Missing bearer token' });
 
-    req.auth = decodedToken;
-    next();
-    G;
-
-    // req.auth = { UserId };
-    // if (req.body.UserId && req.body.UserId !== UserId) {
-    //   throw Error('User ID non valable !');
-    // } else {
-    //   next();
-    // }
+    req.auth = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
+    return next();
   } catch (error) {
-    res
-      .status(401)
-      .json({ error: error || 'You must be logged in to perform this action' });
+    return res.status(401).json({
+      error: 'You must be logged in to perform this action',
+    });
   }
 };

@@ -1,5 +1,11 @@
 const http = require('http');
-require('dotenv').config();
+const path = require('path');
+
+// require('dotenv').config();
+
+require('dotenv').config({
+  path: path.resolve(__dirname, '../../../.env'),
+});
 const app = require('./src/app');
 const { connectDB } = require('./src/db/connect');
 
