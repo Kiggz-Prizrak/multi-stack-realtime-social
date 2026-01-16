@@ -1,11 +1,12 @@
 const userRepository = require('../repositories/user');
 const bcrypt = require('bcrypt');
 
-const httpError = (status, message) => {
-  const err = new Error(message);
-  err.status = status;
-  return err;
-};
+const { toInt } = require('../utils/parsing');
+const {
+  safeUnlink,
+  extractFilenameFromMediaUrl,
+} = require('../utils/filesystem');
+const { httpError } = require('../utils/httpError');
 
 const EMAIL_RX = /^[\w\d.+-]+@[\w.-]+\.[a-z]{2,}$/;
 const PASSWORD_RX =

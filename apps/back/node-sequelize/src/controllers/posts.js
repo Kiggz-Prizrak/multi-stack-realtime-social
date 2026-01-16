@@ -1,140 +1,94 @@
 const { promises: fs } = require('fs');
-const { Post, User, Comment, Reaction } = require('../models');
-const { getAllUsers } = require('./users');
 
-// Post
+const postService = require('../services/posts');
+
 exports.createPost = async (req, res) => {
-  // const postObject = req.body;
-  console.log(req.auth.UserId);
-  if (typeof req.body.content !== 'string') {
-    if (req.files) await fs.unlink(`images/${req.files.media[0].filename}`);
-    return res.status(400).json({ message: 'please provides valid data' });
-  }
-  if (req.files) {
-    const post = Post.create({
-      UserId: req.auth.UserId,
+  try {
+    const created = await postService.createPost({
+      authUserId: req.auth.UserId,
       content: req.body.content,
-      media: `${req.protocol}://${req.get('host')}/images/${
-        req.files.media[0].filename
-      }`,
+      file: req.files?.media?.[0] || null,
+      protocol: req.protocol,
+      host: req.get('host'),
     });
-    if (post) {
-      return res.status(201).json({ message: 'Post créé' });
-    }
-    await fs.unlink(`images/${req.files.media[0].filename}`);
+
+    return res.status(201).json({
+      message: 'Post créé',
+      post: created,
+    });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-  const post = Post.create({
-    UserId: req.auth.UserId,
-    content: req.body.content,
-  });
-  if (post) return res.status(201).json({ message: 'Post créé' });
-  return res.status(404).json({ message: 'Error' });
 };
 
-// Get all posts
 exports.getAllPosts = async (req, res) => {
-  const post = await Post.findAll({
-    include: [
-      {
-        model: User,
-        attributes: ['username', 'firstName', 'lastName', 'avatar'],
-      },
-      {
-        model: Comment,
-        order: [['createdAt', 'DESC']],
-        include: [
-          {
-            model: Reaction,
-          },
-          {
-            model: User,
-            attributes: ['username', 'firstName', 'lastName', 'avatar'],
-          },
-        ],
-      },
-      {
-        model: Reaction,
-      },
-    ],
-    // order: [[Comment, 'createdAt', 'DESC']],
-    order: [
-      ['createdAt', 'DESC'],
-      [Comment, 'createdAt', 'DESC'],
-    ],
-  }).catch((error) => res.status(400).json({ message: 'bad request' }));
-  return res.status(200).json(post);
+  try {
+    const limitRaw = toPositiveInt(req.query.limit);
+    const offsetRaw = toPositiveInt(req.query.offset);
+
+    const limit = limitRaw === null ? 20 : Math.min(limitRaw, 50); // max 50 (posts avec includes = lourd)
+    const offset = offsetRaw === null ? 0 : offsetRaw;
+
+    const result = await postService.getAllPosts({ limit, offset });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
+  }
 };
 
-// Get one post
 exports.getOnePost = async (req, res) => {
-  const post = await Post.findOne({
-    include: [
-      {
-        model: User,
-        attributes: ['username', 'firstName', 'lastName', 'avatar'],
-      },
-      {
-        model: Comment,
-        order: [['createdAt', 'DESC']],
-      },
-      {
-        model: Reaction,
-      },
-    ],
-    order: [[Comment, 'createdAt', 'DESC']],
-    where: { id: req.params.id },
-  }).catch((error) => res.status(404).json({ message: 'Post not found' }));
-  return res.status(200).json(post);
+  try {
+    const post = await postService.getOnePost(req.params.id);
+    return res.status(200).json(post);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
+  }
 };
 
-// modify Post
 exports.modifyPost = async (req, res) => {
-  const post = await Post.findOne({ where: { id: req.params.id } });
-  if (post === null) {
-    if (req.files) await fs.unlink(`images/${req.files.media[0].filename}`);
-    return res.status(404).json({ message: 'Post not found' });
-  }
+  try {
+    await postService.modifyPost({
+      postId: req.params.id,
+      authUserId: req.auth.UserId,
+      isAdmin: !!req.auth.isAdmin,
+      body: req.body,
+      file: req.files?.media?.[0] || null,
+      protocol: req.protocol,
+      host: req.get('host'),
+    });
 
-  if (post.UserId !== req.auth.UserId && !req.auth.isAdmin) {
-    if (req.files) await fs.unlink(`images/${req.files.avatar[0].filename}`);
-    return res.status(403).json({ message: 'Unauthorized request' });
+    return res.status(200).json({ message: 'Post modifié' });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-
-  const postObject = req.files
-    ? {
-        ...req.body,
-        media: `${req.protocol}://${req.get('host')}/images/${req.files.media[0].filename}`,
-      }
-    : req.body;
-
-  await Post.update(
-    { ...postObject, id: req.params.id },
-    { where: { id: req.params.id } },
-  ).catch((error) => res.status(400).json({ error }));
-  if (req.files && post.media) {
-    const filename = post.media.split('/images/')[1];
-    await fs.unlink(`images/${filename}`);
-  }
-  return res.status(200).json({ message: 'Post modifié' });
 };
 
-// DELETE Post
 exports.deletePost = async (req, res) => {
-  const post = await Post.findOne({ where: { id: req.params.id } });
-  if (post === null) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
+  try {
+    await postService.deletePost({
+      postId: req.params.id,
+      authUserId: req.auth.UserId,
+      isAdmin: !!req.auth.isAdmin,
+    });
 
-  if (post.UserId !== req.auth.UserId && !req.auth.isAdmin) {
-    console.log(req.body);
-    return res.status(403).json({ message: 'Unauthorized request' });
+    return res.status(200).json({ message: 'Objet supprimé !' });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-  if (post.media) {
-    const filename = post.media.split('/images/')[1];
-    await fs.unlink(`images/${filename}`);
-  }
-  await Post.destroy({ where: { id: req.params.id } }).catch((error) =>
-    res.status(400).json({ error }),
-  );
-  return res.status(200).json({ message: 'Objet supprimé !' });
 };

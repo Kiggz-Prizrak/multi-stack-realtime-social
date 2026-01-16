@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User } = require('../db/models');
 
 module.exports = async (req, res, next) => {
   const userId = Number(req.params.id);
@@ -18,4 +18,3 @@ module.exports = async (req, res, next) => {
   req.targetUser = user;
   next();
 };
-

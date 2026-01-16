@@ -1,15 +1,11 @@
 const { DataTypes } = require('sequelize');
 
-const initModels = (sequelize) => {
+exports.initModels = (sequelize) => {
   const User = require('./User')(sequelize, DataTypes);
   const Post = require('./Post')(sequelize, DataTypes);
   const Comment = require('./Comment')(sequelize, DataTypes);
   const Reaction = require('./Reaction')(sequelize, DataTypes);
   const Report = require('./Report')(sequelize, DataTypes);
-
-  /* =========================
-     Associations
-  ========================== */
 
   User.hasMany(Post, { onDelete: 'CASCADE' });
   User.hasMany(Comment, { onDelete: 'CASCADE' });
@@ -42,5 +38,3 @@ const initModels = (sequelize) => {
     Report,
   };
 };
-
-module.exports = initModels;

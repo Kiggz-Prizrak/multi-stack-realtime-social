@@ -10,11 +10,7 @@ const EMAIL_RX = /^[\w\d.+-]+@[\w.-]+\.[a-z]{2,}$/;
 const PASSWORD_RX =
   /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[_.@$!%*#?&])[A-Za-z\d_.@$!%*#?&]{8,}$/;
 
-const httpError = (status, message) => {
-  const err = new Error(message);
-  err.status = status;
-  return err;
-};
+const { httpError } = require('../utils/httpError');
 
 exports.signup = async ({ body, avatarFile, protocol, host }) => {
   const { email, password, username, firstName, lastName } = body || {};
@@ -44,15 +40,9 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
   }
 
   const [emailExists, usernameExists] = await Promise.all([
-  console.log('here'),
-
     userRepository.findByEmail(email),
     userRepository.findByUsername(username),
   ]);
-
- ;
-
-
 
   if (emailExists || usernameExists) {
     throw httpError(400, 'email or username already used');
@@ -62,9 +52,12 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
 
   const { isAdmin, ...safeBody } = body;
 
-  const defaultAvatar = 'http://localhost/images/default_avatar.png';
+  // Default avatar (propre, basé sur l’host courant)
+  const baseUrl = `${protocol}://${host}`;
+  const defaultAvatar = `${baseUrl}/images/default_avatar.png`;
+
   const avatar = avatarFile?.filename
-    ? `${protocol}://${host}/images/${avatarFile.filename}`
+    ? `${baseUrl}/images/${avatarFile.filename}`
     : defaultAvatar;
 
   await userRepository.create({
@@ -95,10 +88,14 @@ exports.login = async ({ email, password }) => {
     throw httpError(401, 'Invalid email or password');
   }
 
+  if (!process.env.JWT_SECRET) {
+    throw httpError(500, 'JWT secret is missing (JWT_SECRET)');
+  }
+
   const token = jwt.sign(
     { UserId: user.id, isAdmin: user.isAdmin },
-    process.env.JWT_SECRET_TOKEN,
-    { expiresIn: '24h' },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' },
   );
 
   const safeUser = user.toJSON ? user.toJSON() : { ...user };

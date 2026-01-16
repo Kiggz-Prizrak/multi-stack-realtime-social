@@ -1,9 +1,8 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const { promises: fs } = require('fs');
-const { User, Post, Comment, Reaction } = require('../models');
 const { cleanupUploadedAvatar } = require('../utils/uploadCleanup');
 const authService = require('../services/auth');
+const userService = require('../services/users');
+
 
 exports.signup = async (req, res) => {
   try {

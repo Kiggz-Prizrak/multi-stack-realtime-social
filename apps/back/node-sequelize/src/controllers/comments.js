@@ -1,133 +1,100 @@
 const { promises: fs } = require('fs');
-const { Comment, Post, User, Reaction } = require('../models');
+const commentService = require('../services/comments');
+
+const toPositiveInt = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+};
 
 exports.createComment = async (req, res) => {
-  if (typeof req.body.content !== 'string') {
-    if (req.files) await fs.unlink(`images/${req.files.media[0].filename}`);
-    return res.status(400).json({ message: 'please provides all fields' });
-  }
-  if (req.files) {
-    const comment = Comment.create({
-      UserId: req.auth.UserId,
+  try {
+    const created = await commentService.createComment({
+      authUserId: req.auth.UserId,
       content: req.body.content,
-      PostId: req.body.PostId,
-      media: `${req.protocol}://${req.get('host')}/images/${
-        req.files.media[0].filename
-      }`,
+      postId: req.body.PostId,
+      file: req.files?.media?.[0] || null,
+      protocol: req.protocol,
+      host: req.get('host'),
     });
-    if (comment) {
-      return res.status(201).json({ message: 'Commentaire créé' });
-    }
-    await fs.unlink(`images/${req.files.media[0].filename}`);
+
+    return res.status(201).json({
+      message: 'Commentaire créé',
+      comment: created,
+    });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-  const comment = Comment.create({
-    UserId: req.auth.UserId,
-    content: req.body.content,
-    PostId: req.body.PostId,
-  });
-  if (comment) return res.status(201).json({ message: 'Commentaire créé' });
-  return res.status(500).json({ message: 'An error is ooccurred' });
 };
 
-// Get all comments
 exports.getAllComments = async (req, res) => {
-  const comment = await Comment.findAll({
-    include: [
-      {
-        model: User,
-        attributes: ['username', 'firstName', 'lastName', 'avatar'],
-      },
-      {
-        model: Post,
-      },
-      {
-        model: Reaction,
-      },
-    ],
-    order: [['createdAt', 'DESC']],
-  }).catch((error) => res.status(404).json({ error }));
-  return res.status(200).json(comment);
+  try {
+    const limitRaw = toPositiveInt(req.query.limit);
+    const offsetRaw = toPositiveInt(req.query.offset);
+
+    // defaults + sécurité
+    const limit = limitRaw === null ? 20 : Math.min(limitRaw, 100); // max 100
+    const offset = offsetRaw === null ? 0 : offsetRaw;
+
+    const result = await commentService.getAllComments({ limit, offset });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
+  }
 };
 
-// Get one Comment
 exports.getOneComment = async (req, res) => {
-  const comment = await Comment.findOne({
-    include: [
-      {
-        model: User,
-        attributes: ['username', 'firstName', 'lastName', 'avatar'],
-      },
-      {
-        model: Post,
-      },
-      {
-        model: Reaction,
-      },
-    ],
-    where: { id: req.params.id },
-  }).catch((error) => res.status(400).json({ error }));
-  return res.status(200).json(comment);
+  try {
+    const comment = await commentService.getOneComment(req.params.id);
+    return res.status(200).json(comment);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
+  }
 };
 
-// modify Comment
 exports.modifyComment = async (req, res) => {
-  const comment = await Comment.findOne({ where: { id: req.params.id } });
-  if (comment === null) {
-    if (req.files) await fs.unlink(`images/${req.files.media[0].filename}`);
-    return res.status(404).json({ message: 'Post not found' });
-  }
+  try {
+    await commentService.modifyComment({
+      commentId: req.params.id,
+      authUserId: req.auth.UserId,
+      isAdmin: !!req.auth.isAdmin,
+      body: req.body,
+      file: req.files?.media?.[0] || null,
+      protocol: req.protocol,
+      host: req.get('host'),
+    });
 
-  if (comment.UserId !== req.auth.UserId && !req.auth.isAdmin) {
-    if (req.files) await fs.unlink(`images/${req.files.avatar[0].filename}`);
-    return res.status(403).json({ message: 'Unauthorized request' });
+    return res.status(200).json({ message: 'Commentaire modifié' });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-
-  const commentObject = req.files
-    ? {
-        ...req.body,
-        media: `${req.protocol}://${req.get('host')}/images/${
-          req.files.media[0].filename
-        }`,
-      }
-    : req.body;
-
-  await Comment.update(
-    { ...commentObject, id: req.params.id },
-    { where: { id: req.params.id } },
-  ).catch((error) => res.status(400).json({ error }));
-  if (req.files && post.media) {
-    const filename = comment.media.split('/images/')[1];
-    await fs.unlink(`images/${filename}`);
-  }
-  return res.status(200).json({ message: 'Commentaire modifié' });
 };
 
-// delete Comment
 exports.deleteComment = async (req, res) => {
-  const comment = await Comment.findOne({ where: { id: req.params.id } });
-  if (comment === null) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
+  try {
+    await commentService.deleteComment({
+      commentId: req.params.id,
+      authUserId: req.auth.UserId,
+      isAdmin: !!req.auth.isAdmin,
+    });
 
-  if (comment.UserId !== req.auth.UserId && !req.auth.isAdmin) {
-    return res.status(403).json({ message: 'Unauthorized request' });
+    return res.status(200).json({ message: 'Objet supprimé !' });
+  } catch (error) {
+    const status = error?.statusCode || 500;
+    return res.status(status).json({
+      message: error?.message || 'An error occurred',
+    });
   }
-
-  if (comment.media) {
-    const filename = comment.media.split('/images/')[1];
-    await fs.unlink(`images/${filename}`);
-  }
-  await Comment.destroy({ where: { id: req.params.id } }).catch((error) =>
-    res.status(400).json({ error }),
-  );
-  return res.status(200).json({ message: 'Objet supprimé !' });
 };
-
-//
-//   const filename = comment.media.split('/images/')[1];
-//   await fs.unlink(`images/${filename}`);
-//   await Comment.destroy({ where: { id: req.params.id } }).catch((error) =>
-//     res.status(400).json({ error }),
-//   );
-//   return res.status(200).json({ message: 'Objet supprimé !' });
-// };
