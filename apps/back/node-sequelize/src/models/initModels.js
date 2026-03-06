@@ -7,6 +7,10 @@ exports.initModels = (sequelize) => {
   const Reaction = require('./Reaction')(sequelize, DataTypes);
   const Report = require('./Report')(sequelize, DataTypes);
 
+  const Room = require('./Room')(sequelize, DataTypes);
+  const RoomMember = require('./RoomMember')(sequelize, DataTypes);
+  const Message = require('./Message')(sequelize, DataTypes);
+
   User.hasMany(Post, { onDelete: 'CASCADE' });
   User.hasMany(Comment, { onDelete: 'CASCADE' });
   User.hasMany(Reaction, { onDelete: 'CASCADE' });
@@ -30,11 +34,27 @@ exports.initModels = (sequelize) => {
   Report.belongsTo(Post);
   Report.belongsTo(Comment);
 
+  Room.hasMany(RoomMember, { foreignKey: 'roomId', onDelete: 'CASCADE' });
+  RoomMember.belongsTo(Room, { foreignKey: 'roomId' });
+
+  User.hasMany(RoomMember, { foreignKey: 'userId', onDelete: 'CASCADE' });
+  RoomMember.belongsTo(User, { foreignKey: 'userId' });
+
+  Room.hasMany(Message, { foreignKey: 'roomId', onDelete: 'CASCADE' });
+  Message.belongsTo(Room, { foreignKey: 'roomId' });
+
+  User.hasMany(Message, { foreignKey: 'senderId', onDelete: 'CASCADE' });
+  Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
+
   return {
     User,
     Post,
     Comment,
     Reaction,
     Report,
+
+    Room,
+    RoomMember,
+    Message,
   };
 };

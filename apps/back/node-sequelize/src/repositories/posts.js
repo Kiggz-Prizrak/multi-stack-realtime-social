@@ -1,4 +1,4 @@
-const { Post, User, Comment, Reaction } = require('../models');
+const { Post, User, Comment, Reaction } = require('../db/models');
 
 exports.create = async ({ userId, content, media }) => {
   return Post.create({

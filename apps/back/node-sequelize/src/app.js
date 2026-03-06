@@ -7,6 +7,10 @@ const commentsRoutes = require('./routes/comments');
 const reactionsRoutes = require('./routes/reactions');
 const reportsRoutes = require('./routes/reports');
 
+const roomsRoutes = require('./routes/rooms');
+const messagesRoutes = require('./routes/messages');
+
+require('dotenv').config();
 const app = express();
 
 app.use('/images', express.static('./images'));
@@ -58,5 +62,14 @@ app.use('/api/posts', postsRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/reactions', reactionsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/rooms', roomsRoutes);
+app.use('/api/messages', messagesRoutes);
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res
+    .status(err.status || 500)
+    .json({ error: err.message || 'Erreur serveur' });
+});
 
 module.exports = app;

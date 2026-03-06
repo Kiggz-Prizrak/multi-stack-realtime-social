@@ -1,13 +1,14 @@
 const express = require('express');
 const multer = require('../middleware/multer-config');
 const usersController = require('../controllers/users');
-const canEditUser  = require('../middleware/canEditUser')
+const canEditUser = require('../middleware/canEditUser');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
 router.post('/signup', multer, usersController.signup);
 router.post('/login', usersController.login);
+router.post('/logout', auth, usersController.logout);
 router.get('/', auth, usersController.getAllUsers);
 router.get('/:id', auth, usersController.getOneUser);
 router.put('/:id', auth, canEditUser, multer, usersController.modifyUser);

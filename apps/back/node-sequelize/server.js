@@ -1,13 +1,13 @@
 const http = require('http');
 const path = require('path');
 
-// require('dotenv').config();
-
 require('dotenv').config({
   path: path.resolve(__dirname, '../../../.env'),
 });
+
 const app = require('./src/app');
 const { connectDB } = require('./src/db/connect');
+const { initSocket } = require('./src/socket'); 
 
 const normalizePort = (val) => {
   const port = parseInt(val, 10);
@@ -16,15 +16,15 @@ const normalizePort = (val) => {
   return false;
 };
 
-const port = normalizePort(process.env.PORT || '3000');
+const port = normalizePort(process.env.API_PORT || process.env.PORT || '3000');
 app.set('port', port);
 
 const server = http.createServer(app);
 
+initSocket(server);
+
 const errorHandler = (error) => {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+  if (error.syscall !== 'listen') throw error;
 
   const address = server.address();
   const bind =

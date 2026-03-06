@@ -1,5 +1,5 @@
 // repositories/reactions.js
-const { Reaction } = require('../models');
+const { Reaction } = require('../db/models');
 
 exports.existsForUserOnTarget = async ({ userId, postId, commentId }) => {
   const where = { UserId: userId };

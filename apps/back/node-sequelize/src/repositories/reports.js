@@ -1,5 +1,5 @@
 // repositories/reports.js
-const { Report } = require('../models');
+const { Report } = require('../db/models');
 
 exports.existsForUserOnTarget = async ({ userId, postId, commentId }) => {
   const where = { UserId: userId };
