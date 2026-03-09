@@ -37,6 +37,7 @@ build/
 .vite/
 .eslintcache
 coverage/
+images/
 
 ############################
 # Frontend (Vue / React / Astro)

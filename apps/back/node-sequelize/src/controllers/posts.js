@@ -1,5 +1,5 @@
 const { promises: fs } = require('fs');
-
+const { toPositiveInt } = require('../utils/parsing');
 const postService = require('../services/posts');
 
 exports.createPost = async (req, res) => {
@@ -26,23 +26,29 @@ exports.createPost = async (req, res) => {
 
 exports.getAllPosts = async (req, res) => {
   try {
-    const limitRaw = toPositiveInt(req.query.limit);
-    const offsetRaw = toPositiveInt(req.query.offset);
+    const parsedLimit = Number.parseInt(req.query.limit, 10);
+    const parsedOffset = Number.parseInt(req.query.offset, 10);
 
-    const limit = limitRaw === null ? 20 : Math.min(limitRaw, 50); // max 50 (posts avec includes = lourd)
-    const offset = offsetRaw === null ? 0 : offsetRaw;
+    const limit =
+      Number.isInteger(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 50)
+        : 20;
+
+    const offset =
+      Number.isInteger(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0;
 
     const result = await postService.getAllPosts({ limit, offset });
 
     return res.status(200).json(result);
   } catch (error) {
+    console.error('GET POSTS ERROR:', error);
+
     const status = error?.statusCode || 500;
     return res.status(status).json({
       message: error?.message || 'An error occurred',
     });
   }
 };
-
 exports.getOnePost = async (req, res) => {
   try {
     const post = await postService.getOnePost(req.params.id);

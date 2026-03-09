@@ -2,34 +2,74 @@ const { promises: fs } = require('fs');
 const { cleanupUploadedAvatar } = require('../utils/uploadCleanup');
 const authService = require('../services/auth');
 const userService = require('../services/users');
+const { COOKIE_OPTIONS } = require('../config/cookies');
+
+exports.me = async (req, res) => {
+  try {
+    const userId = req.auth?.id || req.auth?.userId || req.auth?.UserId;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+      });
+    }
+
+    const user = await userService.getOneUser(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error('usersController.me error:', error);
+
+    return res.status(500).json({
+      error: 'Internal server error',
+    });
+  }
+};
 
 exports.signup = async (req, res) => {
   try {
     const avatarFile = req.files?.avatar?.[0] || null;
 
-    await authService.signup({
+    console.log('REQ BODY:', req.body);
+    console.log('REQ FILES:', req.files);
+
+    const signupResult = await authService.signup({
       body: req.body,
       avatarFile,
       protocol: req.protocol,
       host: req.get('host'),
     });
 
-    // ✅ Option : auto-login après signup
-    const { user, token } = await authService.login({
+    console.log('SIGNUP RESULT:', signupResult);
+
+    const loginResult = await authService.login({
       email: req.body.email,
       password: req.body.password,
     });
+
+    console.log('LOGIN RESULT:', loginResult);
+
+    const { user, token } = loginResult;
 
     res.cookie('access_token', token, COOKIE_OPTIONS);
 
     return res.status(201).json({ user });
   } catch (err) {
-    await cleanupUploadedAvatar(req);
+    console.error('SIGNUP ERROR:', err);
+    console.error('STACK:', err.stack);
+
     const status = err.status || 500;
-    return res.status(status).json({ message: err.message || 'Error' });
+    return res.status(status).json({
+      message: err.message || 'Error',
+    });
   }
 };
-
 exports.login = async (req, res) => {
   try {
     const result = await authService.login({
