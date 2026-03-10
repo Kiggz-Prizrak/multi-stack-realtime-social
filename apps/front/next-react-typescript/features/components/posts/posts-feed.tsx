@@ -5,52 +5,8 @@ import { listPosts, deletePost } from "@/features/api/posts";
 import { isApiError } from "@/features/api/error";
 import { PostCard } from "./post-card";
 import { useAuth } from "@/features/context/auth-context";
-
-type PostAuthor = {
-  id?: number | string;
-  username?: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatar?: string | null;
-};
-
-type Reaction = {
-  id: number | string;
-  type: string;
-  UserId?: number | string;
-  userId?: number | string;
-};
-
-type Comment = {
-  id: number | string;
-  content?: string | null;
-  createdAt?: string;
-  User?: PostAuthor;
-  user?: PostAuthor;
-};
-
-type Post = {
-  id: number | string;
-  content?: string | null;
-  media?: string | null;
-  mediaUrl?: string | null;
-  createdAt?: string;
-  User?: PostAuthor;
-  user?: PostAuthor;
-  Reactions?: Reaction[];
-  reactions?: Reaction[];
-  Comments?: Comment[];
-  comments?: Comment[];
-};
-
-type PostsResponse = {
-  items: Post[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-  };
-};
+import type { Post } from "@/features/types/posts";
+import type { PaginatedResponse } from "@/features/api/types";
 
 type PostsFeedProps = {
   refreshKey?: number;
@@ -72,11 +28,10 @@ export function PostsFeed({ refreshKey = 0 }: PostsFeedProps) {
 
       const nextOffset = initial ? 0 : offset;
 
-      const res = (await listPosts({
+      const res: PaginatedResponse<Post> = await listPosts({
         limit,
         offset: nextOffset,
-      })) as PostsResponse;
-
+      });
       if (initial) {
         setPosts(res.items);
         setOffset(res.items.length);
@@ -137,16 +92,14 @@ export function PostsFeed({ refreshKey = 0 }: PostsFeedProps) {
       ))}
 
       {hasMore && (
-        <div className="flex justify-center pt-4">
-          <button
-            type="button"
-            onClick={() => loadPosts(false)}
-            disabled={loading}
-            className="rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {loading ? "Chargement..." : "Charger plus"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => loadPosts(false)}
+          disabled={loading}
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700"
+        >
+          {loading ? "Chargement..." : "Charger plus"}
+        </button>
       )}
     </div>
   );

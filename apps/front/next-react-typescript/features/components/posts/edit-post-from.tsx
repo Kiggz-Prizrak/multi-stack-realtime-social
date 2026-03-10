@@ -3,13 +3,7 @@
 import { useRef, useState } from "react";
 import { updatePost } from "@/features/api/posts";
 import { isApiError } from "@/features/api/error";
-
-type Post = {
-  id: number | string;
-  content?: string | null;
-  media?: string | null;
-  mediaUrl?: string | null;
-};
+import type { Post } from "@/features/types/posts";
 
 type EditPostFormProps = {
   post: Post;

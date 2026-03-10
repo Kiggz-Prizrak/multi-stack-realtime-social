@@ -16,15 +16,14 @@ export function RootRedirect() {
 
     async function resolveDefaultRoute() {
       try {
-        await getMe().then((res) => console.log(res))
+        const res = await getMe();
 
         if (!active) return;
-        router.replace("/home");
-        
+
+        router.replace(res.user?.isAdmin ? "/home" : "/messages");
       } catch (error) {
         if (!active) return;
 
-        console.log(error);
         if (isApiError(error) && error.status === 401) {
           router.replace("/login");
           return;
@@ -48,11 +47,9 @@ export function RootRedirect() {
           <h1 className="text-xl font-semibold text-zinc-900">
             Backend indisponible
           </h1>
-
           <p className="mt-2 text-sm text-zinc-600">
             Impossible de déterminer ta session pour le moment.
           </p>
-
           <button
             type="button"
             onClick={() => window.location.reload()}

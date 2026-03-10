@@ -1,19 +1,11 @@
 "use client";
 
 import { createContext, useContext } from "react";
-
-export type AuthUser = {
-  id: number | string;
-  email?: string;
-  username?: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatar?: string | null;
-  isAdmin?: boolean;
-};
+import type { AuthUser } from "@/features/types/auth";
 
 type AuthContextValue = {
   user: AuthUser | null;
+  isAuthenticated: boolean;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(

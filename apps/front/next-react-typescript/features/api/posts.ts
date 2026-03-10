@@ -1,24 +1,14 @@
 import { apiFetch } from "./http";
-import type { Id, PaginatedParams, ApiMessageResponse } from "./types";
-
-type Post = {
-  id: number | string;
-  content?: string | null;
-  media?: string | null;
-  createdAt?: string;
-};
-
-type PostsResponse = {
-  items: Post[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-  };
-};
+import type {
+  Id,
+  PaginatedParams,
+  ApiMessageResponse,
+  PaginatedResponse,
+} from "./types";
+import type { Post } from "@/features/types/posts";
 
 export async function listPosts(params?: PaginatedParams) {
-  return apiFetch<PostsResponse>("posts", {
+  return apiFetch<PaginatedResponse<Post>>("posts", {
     query: {
       limit: params?.limit,
       offset: params?.offset,
@@ -27,7 +17,7 @@ export async function listPosts(params?: PaginatedParams) {
 }
 
 export async function getPost(id: Id) {
-  return apiFetch<unknown>(`posts/${id}`);
+  return apiFetch<Post>(`posts/${id}`);
 }
 
 export async function createPost(input: { content?: string; media?: File }) {
@@ -36,7 +26,7 @@ export async function createPost(input: { content?: string; media?: File }) {
   if (input.content) formData.append("content", input.content);
   if (input.media) formData.append("media", input.media);
 
-  return apiFetch<{ message: string; post: unknown }>("posts", {
+  return apiFetch<{ message: string; post: Post }>("posts", {
     method: "POST",
     body: formData,
   });

@@ -1,5 +1,6 @@
 import { apiFetch } from "./http";
-import type { AuthResponse, ApiMessageResponse } from "./types";
+import type { ApiMessageResponse } from "./types";
+import type { AuthResponse, MeResponse } from "@/features/types/auth";
 
 export type LoginInput = {
   email: string;
@@ -13,18 +14,6 @@ export type SignupInput = {
   firstName?: string;
   lastName?: string;
   avatar?: File;
-};
-
-export type MeResponse = {
-  user: {
-    id: number;
-    email: string;
-    username: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    avatar?: string | null;
-    isAdmin?: boolean;
-  };
 };
 
 export async function getMe() {

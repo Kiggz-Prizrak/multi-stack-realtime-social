@@ -10,21 +10,20 @@ export type CursorParams = {
   before?: string;
 };
 
-export type AuthUser = {
-  id?: number;
-  email?: string;
-  username?: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatarUrl?: string | null;
-  role?: string;
-};
-
-export type AuthResponse = {
-  user: AuthUser;
-};
-
 export type ApiMessageResponse = {
   message: string;
 };
 
+export type PaginatedResponse<T> = {
+  items: T[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+};
+
+export type CursorResponse<T> = {
+  items: T[];
+  nextCursor: string | null;
+};

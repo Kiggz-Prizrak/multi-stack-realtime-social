@@ -1,8 +1,14 @@
 import { apiFetch } from "./http";
-import type { Id, PaginatedParams, ApiMessageResponse } from "./types";
+import type {
+  Id,
+  PaginatedParams,
+  ApiMessageResponse,
+  PaginatedResponse,
+} from "./types";
+import type { CommentItem } from "@/features/types/comments";
 
 export async function listComments(params?: PaginatedParams) {
-  return apiFetch<unknown>("comments", {
+  return apiFetch<PaginatedResponse<CommentItem>>("comments", {
     query: {
       limit: params?.limit,
       offset: params?.offset,
@@ -11,7 +17,7 @@ export async function listComments(params?: PaginatedParams) {
 }
 
 export async function getComment(id: Id) {
-  return apiFetch<unknown>(`comments/${id}`);
+  return apiFetch<CommentItem>(`comments/${id}`);
 }
 
 export async function createComment(input: {
@@ -20,7 +26,6 @@ export async function createComment(input: {
   media?: File;
 }) {
   const formData = new FormData();
-
   formData.append("content", input.content);
   formData.append("PostId", String(input.PostId));
 
@@ -28,7 +33,7 @@ export async function createComment(input: {
     formData.append("media", input.media);
   }
 
-  return apiFetch<{ message: string; comment: unknown }>("comments", {
+  return apiFetch<{ message: string; comment: CommentItem }>("comments", {
     method: "POST",
     body: formData,
   });

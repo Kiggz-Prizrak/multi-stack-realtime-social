@@ -3,18 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./logout-button";
-
-type User = {
-  id: number | string;
-  username: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatar?: string | null;
-  isAdmin?: boolean;
-};
+import type { AuthUser } from "@/features/types/auth";
 
 type Props = {
-  user: User;
+  user: AuthUser;
 };
 
 function cn(...classes: Array<string | false | undefined>) {
@@ -23,11 +15,12 @@ function cn(...classes: Array<string | false | undefined>) {
 
 export function Sidebar({ user }: Props) {
   const pathname = usePathname();
+  const myProfileHref = `/profile/${user.id}`;
 
   const navItems = [
     ...(user.isAdmin ? [{ href: "/home", label: "Dashboard" }] : []),
     { href: "/messages", label: "Messagerie" },
-    { href: "/profile", label: "Profil" },
+    { href: myProfileHref, label: "Profil" },
   ];
 
   return (
@@ -67,7 +60,7 @@ export function Sidebar({ user }: Props) {
 
       <div className="border-t border-zinc-200 p-4">
         <Link
-          href="/profile"
+          href={myProfileHref}
           className="mb-3 flex items-center gap-3 rounded-2xl p-2 transition hover:bg-zinc-50"
         >
           <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-semibold text-zinc-700">

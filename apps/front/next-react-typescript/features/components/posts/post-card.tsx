@@ -1,59 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createReaction, deleteReaction } from "@/features/api/reactions";
 import { createReport } from "@/features/api/reports";
 import { isApiError } from "@/features/api/error";
 import { CommentsContainer } from "./comments-container";
 import { EditPostForm } from "./edit-post-from";
-
-type PostAuthor = {
-  id?: number | string;
-  username?: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatar?: string | null;
-};
-
-type Reaction = {
-  id: number | string;
-  type: string;
-  UserId?: number | string;
-  userId?: number | string;
-};
-
-type Comment = {
-  id: number | string;
-  content?: string | null;
-  createdAt?: string;
-  User?: PostAuthor;
-  user?: PostAuthor;
-};
-
-type CurrentUser = {
-  id: number | string;
-  username: string;
-  isAdmin?: boolean;
-};
-
-type Post = {
-  id: number | string;
-  UserId?: number | string;
-  content?: string | null;
-  media?: string | null;
-  mediaUrl?: string | null;
-  createdAt?: string;
-  User?: PostAuthor;
-  user?: PostAuthor;
-  Reactions?: Reaction[];
-  reactions?: Reaction[];
-  Comments?: Comment[];
-  comments?: Comment[];
-};
+import type { Post } from "@/features/types/posts";
+import type { Reaction } from "@/features/types/reactions";
+import type { AuthUser } from "@/features/types/auth";
 
 type PostCardProps = {
   post: Post;
-  currentUser?: CurrentUser | null;
+  currentUser?: AuthUser | null;
   onDelete?: (postId: number | string) => void | Promise<void>;
   onRefresh?: () => Promise<void> | void;
 };
@@ -70,16 +29,13 @@ export function PostCard({
 
   const author = post.User ?? post.user;
 
-  console.log(post);
-
   const authorName =
     author?.firstName || author?.lastName
-      ? `${author?.firstName ?? ""} ${author?.lastName ?? ""}`.trim()
+      ? `${author.firstName ?? ""} ${author.lastName ?? ""}`.trim()
       : (author?.username ?? "Utilisateur");
 
   const mediaUrl = post.mediaUrl ?? post.media ?? null;
-
-  const ownerId = post.UserId ?? author?.id;
+  const ownerId = post.UserId ?? post.userId ?? author?.id;
 
   const isOwner =
     currentUser && ownerId ? String(currentUser.id) === String(ownerId) : false;
@@ -88,12 +44,21 @@ export function PostCard({
   const canManage = isOwner || isAdmin;
   const canReport = Boolean(currentUser) && !canManage;
 
-  const reactions = useMemo(
+  const initialReactions = useMemo<Reaction[]>(
     () => post.Reactions ?? post.reactions ?? [],
     [post.Reactions, post.reactions],
   );
 
-  const likes = reactions.filter((reaction) => reaction.type === "like");
+  const [optimisticReactions, setOptimisticReactions] =
+    useState<Reaction[]>(initialReactions);
+
+  useEffect(() => {
+    setOptimisticReactions(initialReactions);
+  }, [initialReactions]);
+
+  const likes = optimisticReactions.filter(
+    (reaction) => reaction.type === "like",
+  );
 
   const myLike = likes.find((reaction) => {
     const reactionUserId = reaction.UserId ?? reaction.userId;
@@ -105,12 +70,27 @@ export function PostCard({
   async function handleToggleLike() {
     if (!currentUser || reactionPending) return;
 
+    const previous = optimisticReactions;
+
     try {
       setReactionPending(true);
 
       if (myLike) {
+        setOptimisticReactions((prev) =>
+          prev.filter((reaction) => String(reaction.id) !== String(myLike.id)),
+        );
+
         await deleteReaction(myLike.id);
       } else {
+        const tempReaction: Reaction = {
+          id: `temp-like-${currentUser.id}-${post.id}`,
+          type: "like",
+          userId: currentUser.id,
+          PostId: post.id,
+        };
+
+        setOptimisticReactions((prev) => [...prev, tempReaction]);
+
         await createReaction({
           PostId: post.id,
           type: "like",
@@ -119,6 +99,8 @@ export function PostCard({
 
       await onRefresh?.();
     } catch (err) {
+      setOptimisticReactions(previous);
+
       if (isApiError(err)) {
         alert(err.message);
       } else {
@@ -164,9 +146,9 @@ export function PostCard({
 
   return (
     <article className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-semibold text-zinc-700">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-semibold text-zinc-700">
             {author?.avatar ? (
               <img
                 src={author.avatar}
@@ -178,33 +160,77 @@ export function PostCard({
             )}
           </div>
 
-          <div>
-            <p className="text-sm font-semibold text-zinc-900">{authorName}</p>
-            {post.createdAt && (
-              <p className="text-xs text-zinc-500">
-                {new Date(post.createdAt).toLocaleString("fr-FR")}
+          <div className="w- flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="truncate text-sm font-semibold text-zinc-900">
+                {authorName}
+              </p>
+
+              {post.createdAt && (
+                <p className="text-xs text-zinc-500">
+                  {new Date(post.createdAt).toLocaleString("fr-FR")}
+                </p>
+              )}
+            </div>
+
+            {post.content && (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
+                {post.content}
               </p>
             )}
+
+            {mediaUrl && (
+              <div className={post.content ? "mt-4" : "mt-3"}>
+                <div className="overflow-hidden rounded-2xl">
+                  <img
+                    src={mediaUrl}
+                    alt="Publication"
+                    className="max-h-[480px] w-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-4">
+              <button
+                type="button"
+                onClick={handleToggleLike}
+                disabled={!currentUser || reactionPending}
+                className={[
+                  "rounded-full border px-3 py-2 text-xs font-medium transition",
+                  myLike
+                    ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
+                  !currentUser || reactionPending ? "opacity-60" : "",
+                ].join(" ")}
+              >
+                {myLike ? "❤️" : "🤍"} {likes.length}
+              </button>
+
+              <span className="text-xs text-zinc-500">
+                {commentsCount} commentaire{commentsCount > 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           {canManage && (
             <>
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
               >
-                Modifier
+                ✏ Modifier
               </button>
 
               <button
                 type="button"
                 onClick={() => onDelete?.(post.id)}
-                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-100"
+                className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-100"
               >
-                Supprimer
+                🗑 Supprimer
               </button>
             </>
           )}
@@ -214,45 +240,12 @@ export function PostCard({
               type="button"
               onClick={handleReport}
               disabled={reportPending}
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-60"
+              className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-60"
             >
               {reportPending ? "Signalement..." : "Signaler"}
             </button>
           )}
         </div>
-      </div>
-
-      {post.content && (
-        <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-700">
-          {post.content}
-        </p>
-      )}
-
-      {mediaUrl && (
-        <div className={post.content ? "mt-4" : ""}>
-          <div className="overflow-hidden rounded-2xl border border-zinc-200">
-            <img
-              src={mediaUrl}
-              alt="Publication"
-              className="max-h-[480px] w-full object-cover"
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-4">
-        <button
-          type="button"
-          onClick={handleToggleLike}
-          disabled={!currentUser || reactionPending}
-          className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
-        >
-          {myLike ? "Retirer le like" : "Liker"} ({likes.length})
-        </button>
-
-        <span className="text-xs text-zinc-500">
-          {commentsCount} commentaire{commentsCount > 1 ? "s" : ""}
-        </span>
       </div>
 
       <CommentsContainer post={post} onRefresh={onRefresh} />
