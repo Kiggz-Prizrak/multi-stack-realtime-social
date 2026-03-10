@@ -47,12 +47,14 @@ export async function updatePost(
   input: {
     content?: string;
     media?: File;
+    removeMedia?: boolean;
   },
 ) {
   const formData = new FormData();
 
-  if (input.content) formData.append("content", input.content);
+  if (input.content !== undefined) formData.append("content", input.content);
   if (input.media) formData.append("media", input.media);
+  if (input.removeMedia) formData.append("removeMedia", "true");
 
   return apiFetch<ApiMessageResponse>(`posts/${id}`, {
     method: "PUT",

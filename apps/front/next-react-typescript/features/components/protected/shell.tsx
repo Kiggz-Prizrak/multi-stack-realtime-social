@@ -5,21 +5,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { getMe } from "@/features/api/auth";
 import { isApiError } from "@/features/api/error";
 import { Sidebar } from "./sidebar";
-
-type User = {
-  id: number;
-  username: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatar?: string | null;
-  isAdmin?: boolean;
-};
+import { AuthContext, type AuthUser } from "@/features/context/auth-context";
 
 export function ProtectedShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
@@ -71,10 +63,11 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-50">
-      <Sidebar user={user} />
-
-      <main className="flex-1 p-8">{children}</main>
-    </div>
+    <AuthContext.Provider value={{ user }}>
+      <div className="flex min-h-screen bg-zinc-50 max-h-screen">
+        <Sidebar user={user} />
+        <main className="flex-1 p-8 overflow-scroll">{children}</main>
+      </div>
+    </AuthContext.Provider>
   );
 }

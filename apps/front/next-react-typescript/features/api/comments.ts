@@ -2,7 +2,7 @@ import { apiFetch } from "./http";
 import type { Id, PaginatedParams, ApiMessageResponse } from "./types";
 
 export async function listComments(params?: PaginatedParams) {
-  return apiFetch<unknown>("/comments", {
+  return apiFetch<unknown>("comments", {
     query: {
       limit: params?.limit,
       offset: params?.offset,
@@ -11,7 +11,7 @@ export async function listComments(params?: PaginatedParams) {
 }
 
 export async function getComment(id: Id) {
-  return apiFetch<unknown>(`/comments/${id}`);
+  return apiFetch<unknown>(`comments/${id}`);
 }
 
 export async function createComment(input: {
@@ -23,9 +23,12 @@ export async function createComment(input: {
 
   formData.append("content", input.content);
   formData.append("PostId", String(input.PostId));
-  if (input.media) formData.append("media", input.media);
 
-  return apiFetch<{ message: string; comment: unknown }>("/comments", {
+  if (input.media) {
+    formData.append("media", input.media);
+  }
+
+  return apiFetch<{ message: string; comment: unknown }>("comments", {
     method: "POST",
     body: formData,
   });
@@ -40,17 +43,22 @@ export async function updateComment(
 ) {
   const formData = new FormData();
 
-  if (input.content) formData.append("content", input.content);
-  if (input.media) formData.append("media", input.media);
+  if (input.content !== undefined) {
+    formData.append("content", input.content);
+  }
 
-  return apiFetch<ApiMessageResponse>(`/comments/${id}`, {
+  if (input.media) {
+    formData.append("media", input.media);
+  }
+
+  return apiFetch<ApiMessageResponse>(`comments/${id}`, {
     method: "PUT",
     body: formData,
   });
 }
 
 export async function deleteComment(id: Id) {
-  return apiFetch<ApiMessageResponse>(`/comments/${id}`, {
+  return apiFetch<ApiMessageResponse>(`comments/${id}`, {
     method: "DELETE",
   });
 }
